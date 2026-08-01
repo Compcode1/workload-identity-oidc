@@ -5,12 +5,12 @@ on:
     branches:
       - main
   schedule:
-    - cron: '0 * * * *'  # Automatically runs every 60 minutes
-  workflow_dispatch:      # Allows manual triggers anytime
+    - cron: '0 * * * *'
+  workflow_dispatch:
 
 permissions:
-  id-token: write  # Required for requesting the OIDC JWT token
-  contents: read   # Required for checking out code
+  id-token: write
+  contents: read
 
 jobs:
   validate-security:
