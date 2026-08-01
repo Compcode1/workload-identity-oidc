@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+  schedule:
+    - cron: '0 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -17,24 +19,17 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Direct OIDC Login & Debug
-        run: |
-          echo "Fetching GitHub OIDC Token..."
-          OIDC_TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange" | jq -r '.value')
-          
-          if [ -z "$OIDC_TOKEN" ] || [ "$OIDC_TOKEN" == "null" ]; then
-            echo "ERROR: Failed to obtain OIDC token from GitHub runtime."
-            exit 1
-          fi
-          echo "OIDC Token retrieved successfully."
+      - name: Azure OIDC Login
+        uses: azure/login@v2
+        with:
+          client-id: "b677c290-cf4b-4a8e-a60e-91ba650a4abe"
+          tenant-id: "9439dd25-f3b5-4829-a76f-5ede8cd54c3c"
+          subscription-id: "d5ffd8a5-d994-4eb5-b87c-4442054d233e"
 
-          echo "Attempting Direct Azure CLI OIDC Login..."
-          az login --service-principal \
-            --client-id "e7e0822c-a39c-4325-8fec-25b014fcb0c3" \
-            --tenant "9439dd25-f3b5-4829-a76f-5ede8cd54c3c" \
-            --federated-token "$OIDC_TOKEN" \
-            --debug
-
-      - name: Verify Key Vault Access
-        run: |
-          az keyvault secret show --name "TestSecret" --vault-name "KV-Secure-Data" --query "value" -o tsv
+      - name: Verify Key Vault Data-Plane Access
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            echo "Attempting data-plane secret retrieval from KV-Secure-Data..."
+            SECRET_VAL=$(az keyvault secret show --name "TestSecret" --vault-name "KV-Secure-Data" --query "value" -o tsv)
+            echo "Successfully retrieved secret value: $SECRET_VAL"
