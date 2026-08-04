@@ -1,35 +1,28 @@
-name: Validate OIDC & Data-Plane Isolation
-
+name: validate-security-multi-agent
 on:
-  push:
-    branches:
-      - main
-  schedule:
-    - cron: '0 * * * *'
-  workflow_dispatch:
+  workflow_dispatch: # Allows manual trigger to test the run
 
 permissions:
   id-token: write
   contents: read
 
 jobs:
-  validate-security:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-
+      
       - name: Azure OIDC Login
         uses: azure/login@v2
         with:
-          client-id: "e7e0822c-a39c-4325-8fec-25b014fcb0c3"
-          tenant-id: "9439dd25-f3b5-4829-a76f-5ede8cd54c3c"
-          subscription-id: "d5ffd8a5-d994-4eb5-b87c-4442054d233e"
-
+          client-id: 7b3e9122-ff26-4610-be9b-7819c74fecf4 # App ID for acphf-agent-1
+          tenant-id: 9439dd25-f3b5-4829-a76f-5ede8cd54c3c
+          subscription-id: d5ffd8a5-d994-4eb5-b87c-4442054d233e # Target Scope from Phase 4
+          
       - name: Verify Key Vault Data-Plane Access
-        uses: azure/CLI@v2
-        with:
-          inlineScript: |
-            echo "Attempting data-plane secret retrieval from KV-Secure-Data..."
-            SECRET_VAL=$(az keyvault secret show --name "TestSecret" --vault-name "KV-Secure-Data" --query "value" -o tsv)
-            echo "Successfully retrieved secret value: $SECRET_VAL"
+        run: |
+          az keyvault secret show --name "ACPHF-OIDC-Success" --vault-name "KV-SECURE-DATA" --query "value" -o tsv
+          
+      - name: Post-Execution & Session Teardown
+        run: az account clear
